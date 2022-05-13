@@ -1,0 +1,191 @@
+---
+title: "Method of Moments and Maximum Likelihood Estimation"
+output: html_document
+author: Ross Woleben
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This file is a supplement to an article I wrote on my website explaining the method of moments estimator, maximum likelihood estimation, and fisher information. The article provides additional context to the motivations of this simulation and can be found at https://www.rosswoleben.com/projects/mom-and-mle .
+
+First, let's investigate the binomial distribution and the gamma distribution to derive and demonstrate properties of the method of moments estimator and the maximum likelihood estimate.
+
+# Binomial Distribution
+The binomial distribution is defined as
+$$f(x;p) = {n \choose x} p^x(1-p)^{1-x}$$
+The method of moments estimator is calculated by finding a moment of the function and solving for the parameter.
+In this case, the expected value of a Binomial can be written as a sum of the expected value of n Bernoulli Trials
+$$E[x] = \sum_{i=1}^nE[x_i] = \sum_{i=1}^np=np$$
+$$\sum_{i=1}^nx_i =n\hat p;\space \hat p = \frac{\sum_{i=1}^nx_i}{n} = \bar x$$
+So our method of moments estimator for p is simply the sample mean.
+
+The maximum likelihood estimate is calculated by maximizing the distribution's log-likelihood function with respect to the parameter you wish to estimate. 
+
+Let's once again observe the probability mass function of the binomial distribution.
+$$f(x;p) = {n \choose {x}}p^x(1-p)^{1-x}$$
+The likelihood function $L_n(x;p)$is simply the product of the marginals. It can expressed as the product of n Bernoulli random variables: $L_n = \prod_{i=1}^n p^x_i(1-p)^{1-x_i}$ as the ${n \choose x}$ term is inconsequential in the final maximum likelihood calculation.
+$$L_n(x;p) = \prod_{i=1}^n p^x_i(1-p)^{1-x_i}$$
+$$log(L_n(x;p)) = \sum_{i=1}^n x_ilogp + (1-x_i)log(1-p)$$
+$$\frac{\partial log(L_n(x;p))}{\partial p} = \sum_{i=1}^n \frac{x_i}{p} - \frac{1-x_i}{1-p} = 0$$
+$$ \frac{\sum_{i=1}^nx_i}{p} - \frac{n-\sum_{i=1}^nx_i}{1-p} = 0 $$
+$$ \frac{\sum_{i=1}^nx_i}{p} = \frac{n-\sum_{i=1}^nx_i}{1-p}$$
+$$ \frac{\sum_{i=1}^nx_i}{p} - p\frac{\sum_{i=1}^nx_i}{p}  = n-\sum_{i=1}^nx_i$$
+$$ = \frac{\sum_{i=1}^nx_i}{p} -\sum_{i=1}^n x_i = n-\sum_{i=1}^nx_i$$
+Add $\sum_{i=1}^n x_i$ to both sides and solve for p:
+$$\hat p = \frac{\sum_{i=1}^n x_i}{n} = \bar x$$
+We observe that the method of moments estimator and maximum likelihood estimator are the exact same quantity in the case of the binomial distribution. Let's see what they mean in context of simulated data.
+```{r}
+set.seed(1)
+(x_i = rbinom(100,1,.5))
+(p_hat=sum(x_i)/100)
+```
+In this situation, both our $\hat p_{MoM}$ and $\hat p_{MLE}$ both give .48 as the estimate of p.
+
+For a binomial distribution, the method of moments estimator and maximum likelihood estimator arrive at the same value, but is one better than the other? Let's look at the asymptotic behavior of each to find out.
+
+We can use the continuous mapping theorem to describe the asymptotic distribution of the method of moments estimator. The theorem posits that if $\bar X_n \to \mu$ as $n \to \infty$, $g(\mu)$ is a continuous function and if $g'(u)\neq0$, then as $n \to \infty$
+$$\sqrt n (g(\bar X_n) - g(\mu)) \to N(0, [g'(u)]^2\sigma^2) $$
+Or more colloquially (when theta is a function of the sample mean),
+$$\hat \theta \sim N(\theta, \frac{[g'(\theta)]^2\sigma^2}{n}) $$
+
+
+And since $\hat p = g(\bar x)$ and $g'(\bar x) = 1$ we expect the asymptotic distribution of the methods of moments estimator to simply be
+$$\hat p_{MoM} \sim N( p, \frac{\sigma^2}{n})$$
+where $\sigma^2$ for the binomial distribution is p(1-p).
+
+
+Lets calculate the fisher information (defined as $I(\theta_n)$) to find the asymptotic distribution for the maximum likelihood estimator.
+$$I(\theta_0)=-E\left[ \frac{\partial^2log(f(x;\theta))}{\partial \theta^2} \right] $$
+We already calculated for first derivative of $log(L_n)$; $\frac{\partial log(L_n(x;p))}{\partial p} = \sum_{i=1}^n \frac{x_i}{p} - \frac{1-x_i}{1-p}$ , so differentiate with respect to p again to get
+$$\frac{\partial^2log(f(x;p))}{\partial p^2} = \frac{\partial^2log(p^x(1-p)^{1-x})}{\partial p^2}$$
+
+$$\frac{\partial log(f(x;p))}{\partial p} = \frac{x}{p} + \frac{1-x}{1-p}$$
+$$ \frac{\partial^2log(f(x;p))}{\partial p^2} = \frac{-x}{p^2}-\frac{1-x}{(1-p)^2} $$
+$$-E\left[\frac{-x}{p^2}-\frac{1-x}{(1-p)^2}\right] = \frac{1}{p^2}E[x] + \frac{1}{(1-p)^2}E[1-x]$$
+$$ = \frac{p}{p^2} + \frac{1-p}{(1-p)^2} = \frac{1}{p} + \frac{1}{1-p} = \frac{1}{p(1-p)} = I(p_0)$$
+The fisher information of the binomial distribution is $\frac{1}{p(1-p)}$. Lets investigate the asymptotic behavior of the MLE.
+In a somewhat similar idea to the method of moments estimator, as $n \to \infty$: 
+$$\sqrt {n I(\theta_0)}(\hat \theta_n - \theta_0) \to N(0, 1) $$
+Or more colloquially, 
+$$\hat \theta_{n} \sim N(\theta_0 , \frac{1}{nI(\theta_0)}) $$
+So in the case of the binomial distribution:
+$$\hat p_{MLE} \sim N(p, \frac{1}{nI(p_0)}) $$
+So when examining the MLE, we expect our estimator to be normally distributed with a mean of the true parameter p, and a variance of $\frac{1}{nI(\theta_n)}$, which turns out to be the exact same as the distribution of the method of moments estimator.
+```{r}
+p_hat = rep(0,1000)
+for(i in 1:1000){
+  data = rbinom(100, 1, .2) #p = .2, sample size = 100
+  p_hat[i] = sum(data)/100
+}
+var(p_hat) #expected to be .0016
+mean(p_hat) #expected to be .2
+hist(p_hat) #expected to look approximately normal with large enough sample size (regardless of true p)
+```
+
+The simulation above shows that the asymptotic distribution of $\hat p$ when p = .2 and n = 100 is $\hat p \sim N(.2, \frac{1}{100(\frac{1}{.2*.8})})$ when evaluating it as the MLE, or as $\hat p \sim N(.2, \frac{.2*.8}{100})$, which is the exact same distribution as I mentioned earlier.
+
+You may have noticed that the Method of Moments estimator and the Maximum Likelihood estimator were the same for the Binomial distribution. For many distributions this isn't the case. Let's observe how the estimates differ by doing the same process for the gamma distribution.
+
+# Gamma Distribution
+The gamma distribution is defined as
+$$f(x; \alpha, \beta) = \frac{\beta^\alpha x^{\alpha-1}e^{-\beta x}}{\Gamma(a)}$$
+And for the sake of simplicity, we are going to calculate the method of moments and MLE assuming that the parameter $\beta$ is known. It is possible to estimate both parameters of a Gamma distribution when both are unknown, but I feel like it is easier to demonstrate if only one parameter needs to be estimated.
+
+For our method of moments calculation:
+$$E[x]= \frac{\alpha}{\beta} $$
+and since $\bar x$ is an unbiased estimator of $E[x]$:
+$$\hat \alpha = \beta \bar x$$
+Using the continuous mapping theorem from above ($\sqrt n (g(\bar X_n) - g(\mu)) \to N(0, [g'(u)]^2\sigma^2)$),
+we can find the distribution of the method of moments estimator, where $g(\bar x) = \beta\bar x; g'(\bar x) = \beta; [g'(\bar x)]^2 = \beta^2$
+
+
+
+$$\hat \alpha_{MoM} \sim N(\alpha, \frac{\beta^2\sigma^2}{n})$$
+where $\sigma^2 = \alpha/\beta^2$ for the gamma distribution.
+
+So when generating data from a gamma distribution where $\alpha = 5$ and $\beta = 2$, the asymptotic distribution for $\hat \alpha_{MoM}$ becomes
+$$\hat \alpha_{MoM} \sim N(5, \frac{2^2*\frac{5}{2^2}}{100}) $$
+```{r}
+a_hat_moments = rep(0,1000)
+for(i in 1:1000){
+  data = rgamma(100, 5, 2) #Alpha = 5, Beta = 2, Sample size = 100
+  a_hat_moments[i] = 2*mean(data)
+}
+var(a_hat_moments) #expected to be .05 when alpha = 5 and beta = 2
+mean(a_hat_moments) #expected to be 5 when alpha = 5
+hist(a_hat_moments) #expected to look approximately normal with large enough sample size
+```
+
+Next, let's calculate the MLE. We start by maximizing the log-likelihood function with respect to $\alpha$
+
+$$L_n(x; \alpha, \beta) = \prod_{i=1}^{n} \frac{\beta^\alpha x_i^{\alpha-1}e^{-\beta x_i}}{\Gamma(a)}$$
+$$ = \left(\frac{\beta^\alpha}{\Gamma(\alpha)}\right)^n * exp(-\beta \sum_{i=1}^nxi)*\prod_{i=1}^n x_i^{\alpha-1}$$
+$$log(L_n) = \sum_{i=1}^n (\alpha log \beta - log\Gamma(a)-\beta x_i+(\alpha-1)log x_i)$$
+
+$$\frac{\partial log(L_n)}{\partial \alpha}= \sum_{i=1}^nlog\beta-\frac{\Gamma\space'(a)}{\Gamma(\alpha)}+logx_i = log\beta - \frac{\Gamma\space'(a)}{\Gamma(\alpha)} + \frac{1}{n}\sum_{i=1}^n log x_i = 0$$
+$$\frac{\Gamma\space'(a)}{\Gamma(\alpha)} = log\beta + \frac{1}{n}\sum_{i=1}^n log x_i$$
+It turns out that the solution to this equation is not closed-form, so we will use the optim() function in R to find our Maximum Likelihood estimate of $\alpha$
+
+As we did above for the binomial distribution, we will now calculate the fisher information for the gamma distribution:
+
+$$\frac{\partial^2log(f(x;\alpha))}{\partial \alpha^2} = \frac{\partial^2log\left(\frac{\beta^\alpha x^{\alpha-1}e^{-\beta x}}{\Gamma(a)}\right)}{\partial \alpha^2}$$
+
+$$\frac{\partial log(f(x;\alpha))}{\partial \alpha} = log\beta + logx - \frac{\Gamma\space'(\alpha)}{\Gamma(\alpha)} $$ 
+$$\frac{\partial^2log(f(x;\alpha))}{\partial \alpha^2} = -\frac{\Gamma\space''(\alpha)}{\Gamma(\alpha)} +  \frac{\Gamma\space'(\alpha)^2}{\Gamma(\alpha)^2}= E\left[-\frac{\Gamma\space''(\alpha)}{\Gamma(\alpha)} +  \frac{\Gamma\space'(\alpha)^2}{\Gamma(\alpha)^2} \right]= I(\alpha_0)$$
+Our fisher information is also known as the trigamma function, which is accessible in R. 
+And our asymptotic distribution of $\hat \alpha$ is
+
+$$\hat \alpha \sim N (\alpha, \frac{1}{n\left[-\frac{\Gamma\space''(\alpha)}{\Gamma(\alpha)} +  \frac{\Gamma\space'(\alpha)^2}{\Gamma(\alpha)^2}   \right]} )$$
+```{r}
+#We need to optimize this function maximizing the log-likelihood function with respect to alpha is not closed form
+GammaLikelihood = function(par,data){
+  n = length(data)
+  alpha = par
+  loglik = n*alpha*log(2)-n*log(gamma(alpha))-2*sum(data)+(alpha-1)*sum(log(data))
+  return(-loglik)
+}
+
+a_hat = rep(0,1000)
+for(i in 1:1000){
+  data = rgamma(100, 5, 2)
+  estimate = optim(2, fn = GammaLikelihood, data = data, method = 'Brent', lower = .1, upper = 20)
+  a_hat[i] = estimate$par
+}
+var(a_hat) #expected to be .04518 or (1/(100*trigamma(5))
+mean(a_hat) #expected to be 5
+hist(a_hat) #expected to look approximately normal with large enough sample size
+```
+
+# So which estimator is better?
+In the gamma distribution example we observe that the asymptotic distributions for $\hat \alpha_{MoM}$ and $\hat \alpha_{MLE}$ actually had different variances. In this context, a lower variance means that an estimator is more precise because the estimate varies less from sample to sample. Since Var($\hat \alpha_{MLE}$) < Var($\hat \alpha_{MoM}$) (.04518 < .05), the MLE is a better estimator. In fact, the MLE is proven to be the most precise possible estimator as $\frac{1}{nI(\theta_0)}$ is the lower bound for the variance.
+
+```{r}
+library(ggplot2)
+
+mom_vs_mle <- function(seed){
+  set.seed(seed)
+  mom_est = rep(0,250)
+  mle = rep(0,250)
+  for(i in 1:250){
+    data = rgamma(i, 5, 2)
+    #For Method of Moments
+    mom_est[i] = 2 * mean(data)
+    #For MLE
+    estimate = optim(2, fn = GammaLikelihood, data = data, method = 'Brent', lower = .1, upper = 20)
+    mle[i] = estimate$par
+  }
+  df = data.frame(sample_size = 1:250, Method_of_Moments = mom_est, MLE = mle)
+  colors <- c("True alpha" = "purple", "Method of Moments Estimate" = "blue", "MLE estimate" = "lightgreen")
+  ggplot(df, aes(x = sample_size)) +  geom_line(aes(y= 5, color = 'True alpha'),size = 1.05) + geom_line(aes(y=Method_of_Moments, color = 'Method of Moments Estimate'), size = .65) + geom_line(aes(y=MLE, color= 'MLE estimate'))  + ylab("Estimated \u03b1") + scale_color_manual(values = colors) + theme(legend.position = c(.8, .8), legend.title = element_blank(), legend.background = element_blank(), legend.text = element_text(size = 10))
+}
+
+mom_vs_mle(0)
+mom_vs_mle(100)
+
+```
+   
+The plot of sample size vs estimation of $\alpha$ shows that as sample size grows, variance tends to get smaller. Furthermore, it also shows that the MLE estimate of alpha has a slightly smaller variance than that of the method of moments estimator.
+
+See article at https://www.rosswoleben.com/projects/mom-and-mle for further discussion.
